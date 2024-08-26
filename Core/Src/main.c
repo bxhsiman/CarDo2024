@@ -110,9 +110,7 @@ int main(void) {
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
-//		UserTasks();
-        printf("HELLOWORLD\r\n");
-        HAL_Delay(1000);
+        UserTasks();
 
         /* USER CODE END WHILE */
 
