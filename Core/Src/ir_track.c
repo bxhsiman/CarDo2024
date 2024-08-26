@@ -66,6 +66,10 @@ void IR_Track_Start( void )
 	}
 }
 
+/*
+ *     IR Track ADC Value process
+ *     @brief adc值二值化 全黑全白判断
+ */
 void ADC_NormalCal(void)
 {
 	g_TrackStatus.adc_value = 0;
@@ -76,7 +80,7 @@ void ADC_NormalCal(void)
 	{
 		g_TrackStatus.adc_value <<= 1;
 		//if(g_TrackStatus.ir_adc[i] < g_CarConfig.adc_compare_gate )
-		if(abs(g_TrackStatus.ir_adc[i] - g_CarConfig.adc_compare_gate) < 300 )
+		if(abs(g_TrackStatus.ir_adc[i] - g_CarConfig.adc_compare_gate) < 300 ) // adcThreshold
 		{
 			g_TrackStatus.adc_value |= 0x01 ;
 		}
