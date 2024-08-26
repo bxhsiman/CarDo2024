@@ -19,7 +19,7 @@ car_config_t g_CarConfig =
                 .KI = 0.0,
                 .KD = 5.8,
                 .car_speed_set = 300,
-                .car_speed_max = 500,
+                .car_speed_max = 1500,
                 .car_speed_min = 300,
                 .adc_compare_gate = 500,
                 .adc_interval     = 2,
@@ -332,13 +332,17 @@ void UserConfigCallback(uint8_t *buf, void *ptr) {
 }
 
 void UserManualCtrlCallback(uint8_t *buf, void *ptr) {
+    printf("receive buf is %s \n", buf);
     int int_temp0 = 0;
     int manu_speed = 0;
     uint8_t len;
     car_ctrl_cmd_t *cmd_ptr = (car_ctrl_cmd_t *) ptr;
     len = strlen((const char *) buf);
 
-    for (int i = 0; i < len; i++) {
+    if (len < 5) {
+        return;
+    }
+    for (int i = 4; i < len; i++) {
         if (buf[i] == '-') {
             return;
         } else if ((buf[i] >= '0') && (buf[i] <= '9')) {
@@ -351,7 +355,8 @@ void UserManualCtrlCallback(uint8_t *buf, void *ptr) {
     if (int_temp0 > 100) {
         return;
     }
-
+    printf("max speed is %d\n", g_CarConfig.car_speed_max);
+    printf("min speed is %d\n", g_CarConfig.car_speed_min);
     manu_speed = ((float) int_temp0 / 100) * (g_CarConfig.car_speed_max - g_CarConfig.car_speed_min);
 
     if (strcmp(cmd_ptr->cmd, USER_CMD_MC_F) == 0) {
@@ -360,6 +365,8 @@ void UserManualCtrlCallback(uint8_t *buf, void *ptr) {
         g_CarCtrl.right_speed = manu_speed;
         StopAllMoto();
         CarMotoCtrl(g_CarCtrl.left_speed, g_CarCtrl.right_speed);
+
+        printf("manu_speed: %d\n", manu_speed);
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_MC_B) == 0) {
         g_CarCtrl.car_mode = CAR_MANU_CTRL;
         g_CarCtrl.left_speed = -1 * manu_speed;
@@ -412,7 +419,6 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         HAL_TIM_Base_Start_IT(&htim6);
         CarMotoCtrl(g_CarConfig.car_speed_set, g_CarConfig.car_speed_set);
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_BT_ON) == 0) {
-        //TBD
         HAL_UART_Transmit(&huart1, (uint8_t *) BT_ENABLE, sizeof(BT_ENABLE), 10);
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_BT_OFF) == 0) {
         HAL_UART_Transmit(&huart1, (uint8_t *) BT_DISABLE, sizeof(BT_DISABLE), 10);
@@ -426,6 +432,12 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         printf("ADC interval: %d ms \n", g_CarConfig.adc_interval);
         printf("Car contrl interval: %d ms \n", g_CarConfig.car_ctrl_interval);
         printf("ADC threshhold: %d \n", g_CarConfig.adc_compare_gate);
+        char str[5];
+        for (int i = 0; i < 5; i++) {
+            str[i] = (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0';
+        }
+        printf("IR result: %s \n ", str);
+
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_FLASH_INIT) == 0) {
         EreaseFlashData(FLASH_BANK1_END - FLASH_PAGE_SIZE + 1, 1);
         __set_FAULTMASK(1);
