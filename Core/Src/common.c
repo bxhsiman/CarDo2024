@@ -17,6 +17,7 @@
 #include "user_flash.h"
 #include "motor_drive.h"
 #include "led_matrix.h"
+#include "../Usr/MPU6050.h"
 
 TIM_HandleTypeDef *g_track_time = &htim6;
 extern __IO uint8_t g_music_enable;
@@ -49,12 +50,13 @@ int fputc(int ch, FILE *p) {
 
 // for gcc
 int _write(int fd, char *pBuffer, int size) {
-    UartTxDataDMA(3, (uint8_t *) pBuffer, size);
+//    UartTxDataDMA(3, (uint8_t *) pBuffer, size);
+    HAL_UART_Transmit(&huart3, (uint8_t *) pBuffer, size, 10); //for test when dma tx is stop
     HAL_UART_Transmit(g_user_uart, (uint8_t *) pBuffer, size, 10);
     return size;
 }
 
-//1 ms interrupt
+//1ms interrupt
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim == &htim6) {
         IR_Track_Start();
@@ -63,6 +65,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
             g_music_flag = 1;
         }
         g_LED_flag = 1;
+    } else if (htim == &htim2) // add callback for yaw calculation
+    {
+        static MPU6050_t data_t;
+        MPU6050_Read_Gyro(&hi2c2, &data_t);
+
+        float raw_yaw = ((float) (data_t.Gz - gyroZ_offset) / 16.384f);
+        g_yaw += 0.005f * raw_yaw * 100 / 6 * 9 / 100 * 90; //magic number
+
+        // 确保g_yaw在-180到180度之间
+        if (g_yaw > 180.0f)
+        {
+            g_yaw -= 360.0f;
+        }
+        else if (g_yaw < -180.0f)
+        {
+            g_yaw += 360.0f;
+        }
     }
 }
 
@@ -208,7 +227,7 @@ void CheckBtnRight(void) {
                 if (g_TrackStatus.ir_adc[i] > adc_value_max) {
                     adc_value_max = g_TrackStatus.ir_adc[i];
                 }
-                if(g_TrackStatus.ir_adc[i] < adc_value_min) {
+                if (g_TrackStatus.ir_adc[i] < adc_value_min) {
                     adc_value_min = g_TrackStatus.ir_adc[i];
                 }
             }

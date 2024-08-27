@@ -10,6 +10,7 @@
 #include "esp32.h"
 #include "user_flash.h"
 #include "uart_dma.h"
+#include "../Usr/MPU6050.h"
 
 extern __IO uint8_t g_music_enable;
 
@@ -483,6 +484,8 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
             printf("%c", (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0');
         }
         printf("\n");
+
+        printf("YAW: %.2f\n", g_yaw);
 
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_FLASH_INIT) == 0) {
         EreaseFlashData(FLASH_BANK1_END - FLASH_PAGE_SIZE + 1, 1);
