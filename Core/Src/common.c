@@ -58,7 +58,6 @@ int _write(int fd, char *pBuffer, int size) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim == &htim6) {
         IR_Track_Start();
-        IR_Track_Start();
     } else if (htim == &htim7) {
         if (g_music_enable == 1) {
             g_music_flag = 1;
@@ -200,7 +199,26 @@ void CheckBtnRight(void) {
             CarMotoCtrl(g_CarConfig.car_speed_set, g_CarConfig.car_speed_set);
         } else if (g_SystemMode == SYSTEM_CAL_BLACK) {
             HAL_TIM_Base_Stop_IT(&htim7);
-            g_CarConfig.adc_compare_gate = g_TrackStatus.total_adc_value / IR_CHANNEL_NUM;
+//            g_CarConfig.adc_compare_gate = g_TrackStatus.total_adc_value / IR_CHANNEL_NUM; //ava
+
+            uint16_t adc_value_max = 0;
+            uint16_t adc_value_min = 1600;
+
+            for (int i = 0; i < IR_CHANNEL_NUM; i++) {
+                if (g_TrackStatus.ir_adc[i] > adc_value_max) {
+                    adc_value_max = g_TrackStatus.ir_adc[i];
+                }
+                if(g_TrackStatus.ir_adc[i] < adc_value_min) {
+                    adc_value_min = g_TrackStatus.ir_adc[i];
+                }
+            }
+            int temp_threshold = (adc_value_max - adc_value_min) / 2 - 300;
+            if (temp_threshold > 0) {
+                g_CarConfig.adc_compare_gate = temp_threshold;
+            } else {
+                g_CarConfig.adc_compare_gate = 1000;
+            }
+            printf("adc_compare_gate is set to %d\n", g_CarConfig.adc_compare_gate);
             UserFlashDataWrite(&g_CarConfig);
             HAL_TIM_Base_Start_IT(&htim7);
         }

@@ -20,16 +20,16 @@ void IR_Track_Init( void )
 	g_TrackStatus.track_error[8] = 18;		//01000
 	
 	// 00001/10000 	line is left or right two sensor position, error is 36mm
-	g_TrackStatus.track_error[1]  = -36;	//00001
-	g_TrackStatus.track_error[16] = 36;	//10000
+	g_TrackStatus.track_error[1]  = -30;	//00001 36
+	g_TrackStatus.track_error[16] = 30;	//10000 -36
 	
 	// 00110/01100 	line is left or right about half sensor position, error is 9mm
 	g_TrackStatus.track_error[6]  = -9;	//00110
 	g_TrackStatus.track_error[12] = 9;	//01100
 	
 	// 00011/11000 	line is left or right one and half sensor position, error is 27mm	
-	g_TrackStatus.track_error[3]  = -27;	//00011
-	g_TrackStatus.track_error[24] = 27;	//11000
+	g_TrackStatus.track_error[3]  = -25;	//00011 -27
+	g_TrackStatus.track_error[24] = 25;	//11000 27
 
 	// 00111/11100 	line is left or right one sensor position, error is 18mm	
 	g_TrackStatus.track_error[7]  = -18;	//00111
@@ -79,8 +79,8 @@ void ADC_NormalCal(void)
 	for(int i = 0; i < IR_CHANNEL_NUM; i++)
 	{
 		g_TrackStatus.adc_value <<= 1;
-		//if(g_TrackStatus.ir_adc[i] > g_CarConfig.adc_compare_gate ) // easy condition
-		if(abs(g_TrackStatus.ir_adc[i] - g_CarConfig.adc_compare_gate) < 300 ) // adcThreshold
+		if(g_TrackStatus.ir_adc[i] > g_CarConfig.adc_compare_gate ) // easy condition
+//		if(abs(g_TrackStatus.ir_adc[i] - g_CarConfig.adc_compare_gate) < 300 ) // adcThreshold
 		{
 			g_TrackStatus.adc_value |= 0x01 ;
 		}

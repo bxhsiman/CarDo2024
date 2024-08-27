@@ -15,12 +15,12 @@ extern __IO uint8_t g_music_enable;
 
 car_config_t g_CarConfig =
         {
-                .KP = 30,
+                .KP = 36,
                 .KI = 0.0,
-                .KD = 5.8,
-                .car_speed_set = 300,
-                .car_speed_max = 1500,
-                .car_speed_min = 300,
+                .KD = 270,
+                .car_speed_set = 600,
+                .car_speed_max = 700,
+                .car_speed_min = 400,
                 .adc_compare_gate = 500,
                 .adc_interval     = 2,
                 .car_ctrl_interval= 2,
@@ -95,6 +95,7 @@ void ManualCarCtrl(void) {
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
+    static uint32_t test_periof = 0;
     static uint32_t t = 0;
     static uint32_t straight = 0;
     static uint32_t no_line = 0;
@@ -107,7 +108,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
         if (no_line > 100) // 100ms no line found , stop car
         {
             StopAllMoto();
-            CarMotoCtrl(-300, -300);
+            CarMotoCtrl(-400, -400);
             return;
         }
         no_line++;
@@ -129,10 +130,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if ((t == g_CarCtrl.car_ctrl_freq) && (g_SystemMode == SYSTEM_TRACK)) {
         t = 0;
         if (g_CarCtrl.last_error == 0) {
-            if (straight > 300)       // accelerate to fastest speed
+            if (straight > 200)       // accelerate to fastest speed
             {
                 g_CarCtrl.car_speed = g_CarConfig.car_speed_max;
-            } else if (straight > 200)  // accelerate to faster speed
+            } else if (straight > 100)  // accelerate to faster speed
             {
                 g_CarCtrl.car_speed = g_CarConfig.car_speed_max - 100;
                 straight++;
@@ -165,20 +166,21 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
  *  @brief  1ms period
  */
 void CarTrackCtrl(void) {
+    static uint32_t start_delay = 0;
     switch (g_CarCtrl.car_mode) {
         case CAR_FIND_START:
             if (g_TrackStatus.full_black && g_CarCtrl.track_start == 0) {
                 g_CarCtrl.track_start = 1;
             } else {
-                if (g_TrackStatus.full_black == 0 && g_CarCtrl.track_start == 1) {
+                if (g_TrackStatus.full_black == 0 && g_CarCtrl.track_start == 1 && ++start_delay > 200) {
                     g_CarCtrl.track_start = 0;
                     g_CarCtrl.car_mode = CAR_TRACKING;
+                    start_delay = 0;
                 }
             }
             break;
 
         case CAR_TRACKING:
-
             if (g_TrackStatus.full_black) {
                 HAL_TIM_Base_Stop_IT(&htim6);
                 StopAllMoto();
@@ -210,6 +212,28 @@ void CarPIDSpeedCtrl(float error, float error_diff) {
     float pid;
     int left_speed;
     int right_speed;
+
+    static float last_err;
+    static float last_err_diff;
+    static float last_last_err;
+
+
+    last_err_diff = (error - last_err) * 0.6f + (error - last_last_err) * 0.4f;
+
+    last_last_err = last_err;
+    last_err = error;
+
+
+    error_diff = last_err_diff;
+
+    static uint32_t test_period = 0;
+
+    if (test_period++ > 1000) {
+        test_period = 0;
+        printf("state is %d \n", g_CarCtrl.car_mode);
+        printf("err is %.2f \n", error);
+        printf("err diff is %.2f \n", error_diff);
+    }
 
     pid = (g_CarConfig.KP * error + g_CarConfig.KD * error_diff) / 2;
 
@@ -439,9 +463,12 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         StopAllMoto();
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_SHOW_CFG) == 0) {
         printf("BT Name:%s , Password : %s\n", g_CarConfig.bt_name, g_CarConfig.bt_pwd);
-        printf("Speed:%d , Kp: %.2f , Kd : %.2f\n", g_CarConfig.car_speed_set, g_CarConfig.KP, g_CarConfig.KD);
+        printf("MAXSpeed: %d, MinSpeed: %d Speed: %d \n", g_CarConfig.car_speed_max, g_CarConfig.car_speed_min,
+               g_CarConfig.car_speed_set);
+        printf("Kp: %.2f, Kd: %.2f \n", g_CarConfig.KP, g_CarConfig.KD);
+
         printf("Kalman enable : %d \n", g_CarConfig.kalman_enable);
-        printf("ADC interval: %d ms \n", g_CarConfig.adc_interval);
+//        printf("ADC interval: %d ms \n", g_CarConfig.adc_interval);
         printf("Car contrl interval: %d ms \n", g_CarConfig.car_ctrl_interval);
         printf("ADC threshhold: %d \n", g_CarConfig.adc_compare_gate);
 
@@ -451,11 +478,11 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         }
         printf("\n");
 
-        char str[5];
-        for (int i = 0; i < 5; i++) {
-            str[i] = (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0';
+        printf("IR result:");
+        for (int i = 0; i < IR_CHANNEL_NUM; i++) {
+            printf("%c", (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0');
         }
-        printf("IR result: %s \n ", str);
+        printf("\n");
 
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_FLASH_INIT) == 0) {
         EreaseFlashData(FLASH_BANK1_END - FLASH_PAGE_SIZE + 1, 1);

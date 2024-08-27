@@ -20,7 +20,7 @@ typedef struct
 }kalman_param_t;
 
 void AngleKalmanInit(car_config_t * p_car_cfg);
-void KalmanFilter(float angle, float angle_diff , uint8_t	adc_interval );
+void KalmanFilter(float angle, float angle_diff , float adc_interval );
 
 extern kalman_param_t g_AngleKalman;
 
