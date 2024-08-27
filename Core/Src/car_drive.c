@@ -160,6 +160,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     }
 }
 
+/*
+ *  Car Track Control
+ *  @brief  1ms period
+ */
 void CarTrackCtrl(void) {
     switch (g_CarCtrl.car_mode) {
         case CAR_FIND_START:
@@ -198,6 +202,10 @@ void CarTrackCtrl(void) {
     }
 }
 
+/*
+ *  Car PID Speed Control
+ *  @brief  Use PID param to control car speed
+ */
 void CarPIDSpeedCtrl(float error, float error_diff) {
     float pid;
     int left_speed;
@@ -239,6 +247,7 @@ void UserConfigCallback(uint8_t *buf, void *ptr) {
     car_ctrl_cmd_t *cmd_ptr = (car_ctrl_cmd_t *) ptr;
 
     len = strlen((const char *) buf);
+    // type check
     switch (cmd_ptr->type) {
         case CONV_INT:
         case CONV_U8:
@@ -326,6 +335,7 @@ void UserConfigCallback(uint8_t *buf, void *ptr) {
 
 
     }
+
     UserFlashDataWrite(&g_CarConfig);
     CarCtrlInit(&g_CarConfig);
     AngleKalmanInit(&g_CarConfig);
@@ -419,6 +429,8 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         HAL_TIM_Base_Start_IT(&htim6);
         CarMotoCtrl(g_CarConfig.car_speed_set, g_CarConfig.car_speed_set);
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_BT_ON) == 0) {
+        printf("BT test!\n");
+        UartTxDataDMA(2, (uint8_t *) BT_ENABLE, sizeof(BT_ENABLE));
         HAL_UART_Transmit(&huart1, (uint8_t *) BT_ENABLE, sizeof(BT_ENABLE), 10);
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_BT_OFF) == 0) {
         HAL_UART_Transmit(&huart1, (uint8_t *) BT_DISABLE, sizeof(BT_DISABLE), 10);
@@ -432,6 +444,13 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         printf("ADC interval: %d ms \n", g_CarConfig.adc_interval);
         printf("Car contrl interval: %d ms \n", g_CarConfig.car_ctrl_interval);
         printf("ADC threshhold: %d \n", g_CarConfig.adc_compare_gate);
+
+        printf("ADC Value buffer: ");
+        for (int i = 0; i < IR_CHANNEL_NUM; i++) {
+            printf("%d ", g_TrackStatus.ir_adc[i]);
+        }
+        printf("\n");
+
         char str[5];
         for (int i = 0; i < 5; i++) {
             str[i] = (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0';

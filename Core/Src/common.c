@@ -38,7 +38,7 @@ __IO uint8_t g_LED_flag = 0;
 
 void SystemModeCtrl(void);
 
-UART_HandleTypeDef *g_user_uart = &huart3;  // printf output
+UART_HandleTypeDef *g_user_uart = &huart1;  // printf output
 
 // for keil
 int fputc(int ch, FILE *p) {
@@ -46,12 +46,11 @@ int fputc(int ch, FILE *p) {
 //	USBTxDataDMA((uint8_t *)&ch, 1);
     return ch;
 }
+
 // for gcc
 int _write(int fd, char *pBuffer, int size) {
-    for (int i = 0; i < size; i++) {
-        while ((USART3->SR & 0X40) == 0);   //等待上一次串口数据发送完成
-        USART3->DR = (uint8_t) pBuffer[i];  //写DR,串口3将发送数据
-    }
+    UartTxDataDMA(3, (uint8_t *) pBuffer, size);
+    HAL_UART_Transmit(g_user_uart, (uint8_t *) pBuffer, size, 10);
     return size;
 }
 
@@ -131,6 +130,7 @@ uint32_t USB_RxDataCallback(uint8_t *buf, uint32_t len) {
         }
         if ((len >= 5) && (strncmp(buf, "MUSIC", 5) == 0)) {
             g_music_enable = 1;
+            return 1;
         }
     } else  // flash mode
     {

@@ -71,9 +71,10 @@ void ESP32_Init(void) {
     strcat(bt_pin, g_CarConfig.bt_pwd);
     strcat(bt_pin, "&");
 
-    HAL_UART_Transmit(&huart1, bt_name, strlen(bt_name), 100);
+   // HAL_UART_Transmit(&huart1, (uint8_t *) BT_ENABLE, sizeof(BT_ENABLE), 100);
+//    HAL_UART_Transmit(&huart1, bt_name, strlen(bt_name), 100);
     HAL_Delay(500);
-    HAL_UART_Transmit(&huart1, bt_pin, strlen(bt_pin), 100);
+//    HAL_UART_Transmit(&huart1, bt_pin, strlen(bt_pin), 100);
 }
 
 void ESP32_Start(uint32_t mode) {

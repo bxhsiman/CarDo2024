@@ -34,11 +34,21 @@ const uart_map_t g_uart_port_map[MAX_UART_PORT_NUM] = {
 uint32_t Uart_RxDataCallback(Switch_Target_TypeDef target_type, uint32_t target_id, uint8_t *buf, uint32_t len) {
     uint32_t ret = 0;
     if (target_type == TARGET_USB) {
+        UartTxDataDMA(3, "from uart2\n", 11);
+        UartTxDataDMA(3, buf, len);
         ret = USBTxDataDMA(buf, len);
     } else if (target_type == TARGET_UART) {
         ret = UartTxDataDMA(target_id, buf, len);
         //UartTxData( target_id , buf , len );
     } else if (target_type == TARGET_CPU) {
+        if (target_id == 0) {
+//            UartTxDataDMA(3, "from uart1\n", 11);
+            UartTxDataDMA(3, buf, len);
+        }
+//        else {
+//            UartTxDataDMA(2, buf, len);
+//            return 1;
+//        }
         ret = UartCtrl_RxDataCallback(buf, len);
     }
     return ret;
@@ -334,7 +344,8 @@ void CheckUartRxData(void) {
     int32_t i;
     for (i = 0; i < g_active_uart_num; i++) {
         if (g_uart_dma[i].rx_buf_full == 1) {
-            printf("Uart Rx overflow!\n");
+//            printf("Uart Rx overflow!\n");
+            UartTxDataDMA(3, "Uart Rx overflow!\n", 18);
         }
         if (g_uart_dma[i].rx_buf_full == 1 ||
             g_uart_dma[i].rx_buf_head != g_uart_dma[i].rx_buf_tail) {

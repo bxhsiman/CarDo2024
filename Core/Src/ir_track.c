@@ -79,7 +79,7 @@ void ADC_NormalCal(void)
 	for(int i = 0; i < IR_CHANNEL_NUM; i++)
 	{
 		g_TrackStatus.adc_value <<= 1;
-		//if(g_TrackStatus.ir_adc[i] < g_CarConfig.adc_compare_gate )
+		//if(g_TrackStatus.ir_adc[i] > g_CarConfig.adc_compare_gate ) // easy condition
 		if(abs(g_TrackStatus.ir_adc[i] - g_CarConfig.adc_compare_gate) < 300 ) // adcThreshold
 		{
 			g_TrackStatus.adc_value |= 0x01 ;
