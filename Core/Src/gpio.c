@@ -57,8 +57,10 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(TRIG_B_GPIO_Port, TRIG_B_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, ESP32_PWR_ON_Pin|LED_BL_Pin|LED_BR_Pin|LED_FL_Pin
-                          |TRIG_F_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(ESP32_PWR_ON_GPIO_Port, ESP32_PWR_ON_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, LED_BL_Pin|LED_BR_Pin|LED_FL_Pin|TRIG_F_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED_FR_GPIO_Port, LED_FR_Pin, GPIO_PIN_RESET);

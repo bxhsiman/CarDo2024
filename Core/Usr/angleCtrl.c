@@ -10,11 +10,12 @@
 AngleCtrl_t angleCtrl = {
         .Kp = 5,
         .Kd = 0,
-        .Ki = 0.02f,
+        .Ki = 0.03f,
         .target = 0,
         .integral = 0,
         .last_error = 0,
         .output_max = 450,
+        .output_min = 300,
         .integral_max = 200,
 };
 
@@ -32,7 +33,7 @@ float AngleCtrl(float angle, int16_t base_speed)
 
     // 计算积分项并限制在最大值范围内
     angleCtrl.integral += error;
-    angleCtrl.integral = LIMIT(angleCtrl.integral, -angleCtrl.integral_max, angleCtrl.integral_max);
+    angleCtrl.integral = LIMIT_MAX(angleCtrl.integral, -angleCtrl.integral_max, angleCtrl.integral_max);
 
     // 计算微分项
     derivative = error - angleCtrl.last_error;
@@ -41,16 +42,21 @@ float AngleCtrl(float angle, int16_t base_speed)
     // 计算PID输出
     output = (angleCtrl.Kp * error + angleCtrl.Kd * derivative + angleCtrl.Ki * angleCtrl.integral);
 
-    output = LIMIT(output, -angleCtrl.output_max, angleCtrl.output_max);
+    output = LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
 
     // 限制输出并计算速度
-    speed = (int16_t) LIMIT(output, -angleCtrl.output_max, angleCtrl.output_max);
+    speed = (int16_t) LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
 
     // 调整电机速度
-    CarMotoCtrl((int16_t)(base_speed - speed), (int16_t)(base_speed + speed));
+    CarMotoCtrl(LIMIT_MIN((int16_t)(base_speed - speed), -angleCtrl.output_min, angleCtrl.output_min),
+                LIMIT_MIN((int16_t) (base_speed + speed), -angleCtrl.output_min, angleCtrl.output_min));
 
     // 延迟处理
     static uint32_t delay = 0;
+    if (delay > 20)
+    {
+        HAL_GPIO_TogglePin(LED_BL_GPIO_Port, LED_BR_Pin);
+    }
     if (++delay > 200)
     {
         delay = 0;

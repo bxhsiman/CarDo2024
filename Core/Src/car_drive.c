@@ -11,17 +11,19 @@
 #include "user_flash.h"
 #include "uart_dma.h"
 #include "../Usr/MPU6050.h"
-
+#include <math.h>
 extern __IO uint8_t g_music_enable;
 
+#define MY_UP_1
+uint8_t white_time = 0;
 car_config_t g_CarConfig =
         {
                 .KP = 36,
                 .KI = 0.0,
                 .KD = 270,
-                .car_speed_set = 600,
-                .car_speed_max = 700,
-                .car_speed_min = 400,
+                .car_speed_set = 300,
+                .car_speed_max = 400,
+                .car_speed_min = 300,
                 .adc_compare_gate = 500,
                 .adc_interval     = 2,
                 .car_ctrl_interval= 2,
@@ -108,8 +110,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     if ((g_TrackStatus.full_white == 1) && (g_CarCtrl.car_mode == CAR_TRACKING)) {
         if (no_line > 100) // 100ms no line found , stop car
         {
+
+#ifndef MY_UP_1
             StopAllMoto();
             CarMotoCtrl(-400, -400);
+#endif
+            white_time++;
             return;
         }
         no_line++;
@@ -168,6 +174,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
  */
 void CarTrackCtrl(void) {
     static uint32_t start_delay = 0;
+    static uint8_t run = 1;
     switch (g_CarCtrl.car_mode) {
         case CAR_FIND_START:
             if (g_TrackStatus.full_black && g_CarCtrl.track_start == 0) {
@@ -182,6 +189,23 @@ void CarTrackCtrl(void) {
             break;
 
         case CAR_TRACKING:
+#ifdef MY_UP_1
+            if (fabs(g_yaw) < 20 && white_time >= 2){
+                HAL_TIM_Base_Stop_IT(&htim6);
+                StopAllMoto();
+                CarMotoCtrl(0, 0);
+                HAL_ADC_Stop_DMA(&hadc1);
+                IR_Track_Power_Off();
+                HAL_TIM_Base_Start_IT(&htim7);
+                g_CarCtrl.car_mode = CAR_IDLE;
+                run = 0;
+            }
+            else if ( (fabs(g_yaw) - 180) < 20 && white_time >= 1)
+            {
+                g_CarCtrl.car_speed = g_CarConfig.car_speed_max;
+                run = 1;
+            }
+#else
             if (g_TrackStatus.full_black) {
                 HAL_TIM_Base_Stop_IT(&htim6);
                 StopAllMoto();
@@ -190,7 +214,11 @@ void CarTrackCtrl(void) {
                 IR_Track_Power_Off();
                 HAL_TIM_Base_Start_IT(&htim7);
                 g_CarCtrl.car_mode = CAR_IDLE;
-            } else {
+                run = 0;
+            }
+#endif
+            if (run)
+            {
                 if (g_CarConfig.kalman_enable) {
                     CarPIDSpeedCtrl(g_AngleKalman.last_angle, g_AngleKalman.last_diff);
                 } else {

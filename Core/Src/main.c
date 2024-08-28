@@ -117,11 +117,8 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
-//        UserTasks();
-        TURN_ANGLE(90, 5 ,0);
-        printf("finished!\n");
-        CarMotoCtrl(0, 0);
-        HAL_Delay(1000000009);
+        UserTasks();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
