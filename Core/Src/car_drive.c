@@ -113,7 +113,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
 
     ADC_NormalCal();
     UP2_StateMachine();
-//    return;
+    return;
     if ((g_TrackStatus.full_white == 1) && (g_CarCtrl.car_mode == CAR_TRACKING)) {
 #ifdef MY_UP_1
         if(1) // already pass a white zone and passing a line
@@ -344,7 +344,7 @@ void CarPIDSpeedCtrl(float error, float error_diff) {
 
     if (++test_period > 1000) {
         test_period = 0;
-        printf("state is %d \n", g_CarCtrl.car_mode);
+        printf("state is %d \n", up2_state);
         printf("err is %.2f \n", error);
         printf("err diff is %.2f \n", error_diff);
         printf("speed is %d \n", g_CarCtrl.car_speed);
@@ -598,6 +598,8 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         printf("\n");
 
         printf("YAW: %.2f\n", g_yaw);
+
+        printf("MachinState is %d \n", up2_state);
 
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_FLASH_INIT) == 0) {
         EreaseFlashData(FLASH_BANK1_END - FLASH_PAGE_SIZE + 1, 1);
