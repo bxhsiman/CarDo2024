@@ -125,7 +125,9 @@ void UP2_StateMachine(void) {
         }
         case UP2_STATE_TURN_LEFT: {
             int16_t yaw_speed = 0;
+            int16_t target_yaw = -135; // must be negative
             yaw_speed = AnglePID(g_yaw - (180 - 45));
+            yaw_speed = AnglePID(g_yaw > 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
 
             yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
             static uint32_t t = 0;
@@ -173,7 +175,8 @@ void UP2_StateMachine(void) {
             // find line at target is -180бу
             int16_t yaw_speed = 0;
             yaw_speed = AnglePID(g_yaw < 0 ? (g_yaw + 180) : (g_yaw - 180));
-            yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
+            yaw_speed = LIMIT_MAX(yaw_speed, -500, 500);
+            yaw_speed = LIMIT_MIN(yaw_speed, -300, 300);
             static uint32_t t = 0;
             if (++t > 100) {
                 t = 0;
@@ -184,7 +187,7 @@ void UP2_StateMachine(void) {
             StopAllMoto();
             CarMotoCtrl(0 + yaw_speed, 0 - yaw_speed);
 
-            if (fabs((fabs(g_yaw) - 180)) < 20) {
+            if (-((fabs(g_yaw) - 180)) < 20) {
                 trans_state(UP2_STATE_BLACK_TRACKING);
             }
             break;
