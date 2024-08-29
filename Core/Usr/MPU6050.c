@@ -1,6 +1,7 @@
 #include <math.h>
-#include "MPU6050.h"
+#include "mpu6050.h"
 #include "tim.h"
+#include "soft_IIC.h"
 
 #define RAD_TO_DEG 57.295779513082320876798154814105
 
@@ -35,47 +36,41 @@ Kalman_t KalmanY = {
         .R_measure = 0.03f,
 };
 
-uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx)
+uint8_t MPU6050_Init(void)
 {
     uint8_t check;
     uint8_t Data;
     HAL_TIM_Base_Start_IT(&htim2);
-    // check device ID WHO_AM_I
 
-    HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, WHO_AM_I_REG, 1, &check, 1, i2c_timeout);
+    I2C_Read(MPU6050_ADDR, WHO_AM_I_REG, &check, 1);
 
     if (check == 104)  // 0x68 will be returned by the sensor if everything goes well
     {
-        // power management register 0X6B we should write all 0's to wake the sensor up
         Data = 1;
-        HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, PWR_MGMT_1_REG, 1, &Data, 1, i2c_timeout);
+        I2C_Write(MPU6050_ADDR, PWR_MGMT_1_REG, &Data, 1);
 
-        // Set DATA RATE of 1KHz by writing SMPLRT_DIV register
         Data = 0x04;
-        HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, SMPLRT_DIV_REG, 1, &Data, 1, i2c_timeout);
+        I2C_Write(MPU6050_ADDR, SMPLRT_DIV_REG, &Data, 1);
 
-        // Set accelerometer configuration in ACCEL_CONFIG Register
-        // XA_ST=0,YA_ST=0,ZA_ST=0, FS_SEL=0 -> ? 2g
         Data = 0x06;
-        HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, ACCEL_CONFIG_REG, 1, &Data, 1, i2c_timeout);
+        I2C_Write(MPU6050_ADDR, ACCEL_CONFIG_REG, &Data, 1);
 
-        // Set Gyroscopic configuration in GYRO_CONFIG Register
-        // XG_ST=0,YG_ST=0,ZG_ST=0, FS_SEL=0 -> ? 250 ?/s
         Data = 0x18;
-        HAL_I2C_Mem_Write(I2Cx, MPU6050_ADDR, GYRO_CONFIG_REG, 1, &Data, 1, i2c_timeout);
+        I2C_Write(MPU6050_ADDR, GYRO_CONFIG_REG, &Data, 1);
         return 0;
     }
     return 1;
 }
 
 
-void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
+void MPU6050_Read_Accel(MPU6050_t *DataStruct)
 {
     uint8_t Rec_Data[6];
 
     // Read 6 BYTES of data starting from ACCEL_XOUT_H register
 
-    HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 6, i2c_timeout);
+    // 使用模拟 I2C 读取加速度计数据
+    I2C_Read(MPU6050_ADDR, ACCEL_XOUT_H_REG, Rec_Data, 6);
 
     DataStruct->Accel_X_RAW = (int16_t) (Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Accel_Y_RAW = (int16_t) (Rec_Data[2] << 8 | Rec_Data[3]);
@@ -92,13 +87,14 @@ void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
 }
 
 
-void MPU6050_Read_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
+void MPU6050_Read_Gyro(MPU6050_t *DataStruct)
 {
     uint8_t Rec_Data[6];
 
     // Read 6 BYTES of data starting from GYRO_XOUT_H register
 
-    HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, GYRO_XOUT_H_REG, 1, Rec_Data, 6, i2c_timeout);
+    // 使用模拟 I2C 读取陀螺仪数据
+    I2C_Read(MPU6050_ADDR, GYRO_XOUT_H_REG, Rec_Data, 6);
 
     DataStruct->Gyro_X_RAW = (int16_t) (Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Gyro_Y_RAW = (int16_t) (Rec_Data[2] << 8 | Rec_Data[3]);
@@ -114,27 +110,29 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
     DataStruct->Gz = DataStruct->Gyro_Z_RAW / 131.0;
 }
 
-void MPU6050_Read_Temp(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
+void MPU6050_Read_Temp(MPU6050_t *DataStruct)
 {
     uint8_t Rec_Data[2];
     int16_t temp;
 
     // Read 2 BYTES of data starting from TEMP_OUT_H_REG register
 
-    HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, TEMP_OUT_H_REG, 1, Rec_Data, 2, i2c_timeout);
+    // 使用模拟 I2C 读取温度数据
+    I2C_Read(MPU6050_ADDR, TEMP_OUT_H_REG, Rec_Data, 2);
 
     temp = (int16_t) (Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Temperature = (float) ((int16_t) temp / (float) 340.0 + (float) 36.53);
 }
 
-void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct)
+void MPU6050_Read_All(MPU6050_t *DataStruct)
 {
     uint8_t Rec_Data[14];
     int16_t temp;
 
     // Read 14 BYTES of data starting from ACCEL_XOUT_H register
 
-    HAL_I2C_Mem_Read(I2Cx, MPU6050_ADDR, ACCEL_XOUT_H_REG, 1, Rec_Data, 14, i2c_timeout);
+    // 使用模拟 I2C 读取所有传感器数据
+    I2C_Read(MPU6050_ADDR, ACCEL_XOUT_H_REG, Rec_Data, 14);
 
     DataStruct->Accel_X_RAW = (int16_t) (Rec_Data[0] << 8 | Rec_Data[1]);
     DataStruct->Accel_Y_RAW = (int16_t) (Rec_Data[2] << 8 | Rec_Data[3]);
@@ -217,9 +215,52 @@ void MPU6050_Calibration(void)
     MPU6050_t data_t;
     for(uint8_t i = 0; i < 100; i++)
     {
-        MPU6050_Read_Gyro(&hi2c2, &data_t);
+        MPU6050_Read_Gyro(&data_t);
         gyroZ_sum += data_t.Gz;
         HAL_Delay(1);
     }
     gyroZ_offset = (float)(gyroZ_sum / 100.0);
+}
+
+void MPU6050_Reset(void)
+{
+    uint8_t Data;
+
+    // 停止定时器中断
+    HAL_TIM_Base_Stop_IT(&htim2);
+
+    // 重置定时器计数器
+    timer = HAL_GetTick();
+
+    // 复位 MPU6050 寄存器到初始状态
+    // 发送复位命令到 PWR_MGMT_1 寄存器，复位整个设备
+    Data = 0x80; // 复位命令
+    I2C_Write(MPU6050_ADDR, PWR_MGMT_1_REG, &Data, 1);
+    HAL_Delay(100); // 等待复位完成
+
+    // 重新初始化 MPU6050
+    MPU6050_Init();
+
+    // 清零角度和偏差滤波器
+    KalmanX.angle = 0;
+    KalmanX.bias = 0;
+    KalmanX.P[0][0] = 0;
+    KalmanX.P[0][1] = 0;
+    KalmanX.P[1][0] = 0;
+    KalmanX.P[1][1] = 0;
+
+    KalmanY.angle = 0;
+    KalmanY.bias = 0;
+    KalmanY.P[0][0] = 0;
+    KalmanY.P[0][1] = 0;
+    KalmanY.P[1][0] = 0;
+    KalmanY.P[1][1] = 0;
+
+    // 重置陀螺仪Z轴的偏移和累积值
+    gyroZ_offset = 0;
+    gyroZ_sum = 0;
+    g_yaw = 0;
+
+    // 重新启动定时器中断
+    HAL_TIM_Base_Start_IT(&htim2);
 }

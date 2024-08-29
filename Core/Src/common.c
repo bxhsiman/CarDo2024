@@ -3,7 +3,6 @@
 #include "main.h"
 #include "gpio.h"
 #include "tim.h"
-#include "i2c.h"
 #include "usart.h"
 #include "common.h"
 #include "uart_dma.h"
@@ -65,10 +64,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
             g_music_flag = 1;
         }
         g_LED_flag = 1;
-    } else if (htim == &htim2) // add callback for yaw calculation
+    }
+
+//#ifdef MY_UP_1
+    else if (htim == &htim2) // add callback for yaw calculation
     {
         static MPU6050_t data_t;
-        MPU6050_Read_Gyro(&hi2c2, &data_t);
+        MPU6050_Read_Gyro(&data_t);
 
         float raw_yaw = ((float) (data_t.Gz - gyroZ_offset) / 16.384f);
         g_yaw += 0.005f * raw_yaw * 100 / 6 * 9 / 100 * 90; //magic number
@@ -83,6 +85,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
             g_yaw += 360.0f;
         }
     }
+//#endif
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////

@@ -2,7 +2,6 @@
 #include "car_drive.h"
 #include "ir_track.h"
 #include "motor_drive.h"
-#include "oled_i2c.h"
 #include "usb_uart.h"
 #include "usart.h"
 #include "angle_kalman_filter.h"
@@ -11,10 +10,11 @@
 #include "user_flash.h"
 #include "uart_dma.h"
 #include "../Usr/MPU6050.h"
+#include "../Usr/angleCtrl.h"
 #include <math.h>
+
 extern __IO uint8_t g_music_enable;
 
-#define MY_UP_1
 uint8_t white_time = 0;
 car_config_t g_CarConfig =
         {
@@ -70,6 +70,8 @@ car_ctrl_cmd_t g_CarCtrlCmd[] = {
         {USER_CMD_FLASH_INIT, &UserCtrlCmdCallback,    0, 0},
         {USER_CMD_MUSIC_ON,   &UserCtrlCmdCallback,    0, 0},
         {USER_CMD_MUSIC_OFF,  &UserCtrlCmdCallback,    0, 0},
+        {USER_CMD_RESET_IMU,  &UserCtrlCmdCallback,    0, 0},
+
 
 };
 
@@ -102,25 +104,78 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     static uint32_t t = 0;
     static uint32_t straight = 0;
     static uint32_t no_line = 0;
+    static  uint32_t  is_line = 0;
+    int16_t yaw_speed = 0;
+    static uint8_t back_flag = 0; //MY_UP_1_NO_GYRO
 
     int last_err_diff;
 
     ADC_NormalCal();
 
     if ((g_TrackStatus.full_white == 1) && (g_CarCtrl.car_mode == CAR_TRACKING)) {
+#ifdef MY_UP_1
+        if(1) // already pass a white zone and passing a line
+        {
+            if( (fabs(g_yaw) - 180) < 20 && white_time >= 1) // in the backing white zone
+            {
+                yaw_speed = 5 * (int16_t)(g_yaw - 180);
+            }
+        }
+        StopAllMoto();
+        CarMotoCtrl(g_CarConfig.car_speed_min + yaw_speed, g_CarConfig.car_speed_min - yaw_speed);
+#endif
+#ifdef MY_BASE
         if (no_line > 100) // 100ms no line found , stop car
         {
 
-#ifndef MY_UP_1
+
             StopAllMoto();
             CarMotoCtrl(-400, -400);
-#endif
             white_time++;
             return;
         }
         no_line++;
+#endif
+
+#ifdef MY_UP_1_NO_GYRO
+//        if ( no_line > 20 && back_flag < 3) { // 20ms no line found back 3 times
+//            printf("no line back!\n");
+//            back_flag++;
+//            CarMotoCtrl(-500, -500);
+//            return;
+//        }
+//
+//        no_line++;
+        if( fabs((fabs(g_yaw) - 180)) < 20) // in the backing white zone
+        {
+            yaw_speed = AnglePID(g_yaw < 0 ? (g_yaw + 180) : (g_yaw - 180));
+
+            yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
+            static uint32_t t = 0;
+            if( ++ t > 70)
+            {
+                t = 0;
+                printf("yaw is %.2f\n", g_yaw);
+                printf("yaw speed is %d\n", yaw_speed);
+            }
+        }
+        StopAllMoto();
+
+        CarMotoCtrl(550 + yaw_speed, 550 - yaw_speed);
+        return;
+#endif
+
     } else {
         no_line = 0;
+        is_line++;
+    }
+
+    if(is_line > 250){
+        is_line = 0;
+        back_flag = 1;
+//        // reverse the pid error
+//        g_TrackStatus.track_error[1] = -22; // 00001
+//        g_TrackStatus.track_error[3] = -18; // 00011
     }
 
     last_err_diff = g_TrackStatus.track_error[g_TrackStatus.adc_value] - g_CarCtrl.last_error;
@@ -136,11 +191,13 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     t++;
     if ((t == g_CarCtrl.car_ctrl_freq) && (g_SystemMode == SYSTEM_TRACK)) {
         t = 0;
+
+#ifdef MY_BASE
         if (g_CarCtrl.last_error == 0) {
-            if (straight > 200)       // accelerate to fastest speed
+            if (straight > 100)       // accelerate to fastest speed
             {
                 g_CarCtrl.car_speed = g_CarConfig.car_speed_max;
-            } else if (straight > 100)  // accelerate to faster speed
+            } else if (straight > 80)  // accelerate to faster speed
             {
                 g_CarCtrl.car_speed = g_CarConfig.car_speed_max - 100;
                 straight++;
@@ -148,24 +205,31 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
                 straight++;
             }
         } else {
-            if (straight > 200) {
+            if (straight > 100) {
                 g_CarCtrl.car_speed = -600;  // brake car
-            } else if (straight > 100) {
+            } else if (straight > 80) {
                 g_CarCtrl.car_speed = -400;  // brake car
             } else {
                 g_CarCtrl.car_speed = g_CarConfig.car_speed_min;  // curve speed
             }
             straight = 0;
         }
+#endif
+
+#ifdef MY_UP_1_NO_GYRO
+        g_CarCtrl.car_speed = g_CarConfig.car_speed_min; //min speed for curve(no long straight in this case)
+#endif
 
         g_CarCtrl.track_err_diff = (float) g_CarCtrl.total_err_diff / (float) g_CarConfig.car_ctrl_interval;
         g_CarCtrl.track_err = (float) g_CarCtrl.total_err / (float) g_CarCtrl.car_ctrl_freq;
         CarTrackCtrl();
         g_CarCtrl.total_err_diff = 0.0;
         g_CarCtrl.total_err = 0.0;
+
     } else if (t > g_CarCtrl.car_ctrl_freq) {
         t = 0;
     }
+
 }
 
 /*
@@ -190,22 +254,29 @@ void CarTrackCtrl(void) {
 
         case CAR_TRACKING:
 #ifdef MY_UP_1
-            if (fabs(g_yaw) < 20 && white_time >= 2){
-                HAL_TIM_Base_Stop_IT(&htim6);
-                StopAllMoto();
-                CarMotoCtrl(0, 0);
-                HAL_ADC_Stop_DMA(&hadc1);
-                IR_Track_Power_Off();
-                HAL_TIM_Base_Start_IT(&htim7);
-                g_CarCtrl.car_mode = CAR_IDLE;
-                run = 0;
-            }
-            else if ( (fabs(g_yaw) - 180) < 20 && white_time >= 1)
-            {
-                g_CarCtrl.car_speed = g_CarConfig.car_speed_max;
-                run = 1;
-            }
-#else
+//            if (fabs(g_yaw) < 20 && white_time >= 2){
+//                HAL_TIM_Base_Stop_IT(&htim6);
+//                StopAllMoto();
+//                CarMotoCtrl(0, 0);
+//                HAL_ADC_Stop_DMA(&hadc1);
+//                IR_Track_Power_Off();
+//                HAL_TIM_Base_Start_IT(&htim7);
+//                g_CarCtrl.car_mode = CAR_IDLE;
+//                run = 0;
+//            }
+//            else if ( (fabs(g_yaw) - 180) < 20 && white_time >= 1)
+//            {
+//                g_CarCtrl.car_speed = g_CarConfig.car_speed_max;
+//                run = 1;
+//            }
+#endif
+
+//#ifdef MY_UP_1_NO_GYRO
+//            CarMotoCtrl(g_CarConfig.car_speed_min, g_CarConfig.car_speed_min);
+//            if (white_time == 1)
+//
+//#endif
+
             if (g_TrackStatus.full_black) {
                 HAL_TIM_Base_Stop_IT(&htim6);
                 StopAllMoto();
@@ -214,17 +285,24 @@ void CarTrackCtrl(void) {
                 IR_Track_Power_Off();
                 HAL_TIM_Base_Start_IT(&htim7);
                 g_CarCtrl.car_mode = CAR_IDLE;
-                run = 0;
+                return;
             }
-#endif
-            if (run)
-            {
-                if (g_CarConfig.kalman_enable) {
-                    CarPIDSpeedCtrl(g_AngleKalman.last_angle, g_AngleKalman.last_diff);
-                } else {
-                    CarPIDSpeedCtrl(g_CarCtrl.track_err, g_CarCtrl.track_err_diff);
-                }
+
+//            if(++start_delay > 100){
+//                printf("IR result:");
+//                for (int i = 0; i < IR_CHANNEL_NUM; i++) {
+//                    printf("%c", (g_TrackStatus.adc_value & (1 << (4 - i))) ? '1' : '0');
+//                }
+//                printf("\n");
+//            }
+
+
+            if (g_CarConfig.kalman_enable) {
+                CarPIDSpeedCtrl(g_AngleKalman.last_angle, g_AngleKalman.last_diff);
+            } else {
+                CarPIDSpeedCtrl(g_CarCtrl.track_err, g_CarCtrl.track_err_diff);
             }
+
             break;
 
         default:
@@ -257,17 +335,21 @@ void CarPIDSpeedCtrl(float error, float error_diff) {
 
     static uint32_t test_period = 0;
 
-    if (test_period++ > 1000) {
-        test_period = 0;
-        printf("state is %d \n", g_CarCtrl.car_mode);
-        printf("err is %.2f \n", error);
-        printf("err diff is %.2f \n", error_diff);
-    }
-
     pid = (g_CarConfig.KP * error + g_CarConfig.KD * error_diff) / 2;
 
     left_speed = g_CarCtrl.car_speed + pid;
     right_speed = g_CarCtrl.car_speed - pid;
+
+    if (++test_period > 1000) {
+        test_period = 0;
+        printf("state is %d \n", g_CarCtrl.car_mode);
+        printf("err is %.2f \n", error);
+        printf("err diff is %.2f \n", error_diff);
+        printf("speed is %d \n", g_CarCtrl.car_speed);
+        printf("right speed is %d \n", right_speed);
+        printf("left speed is %d\n", left_speed);
+    }
+
     StopAllMoto();
     CarMotoCtrl(left_speed, right_speed);
 }
@@ -523,6 +605,10 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         g_music_enable = 1;
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_MUSIC_OFF) == 0) {
         g_music_enable = 0;
+    }
+    else if (strcmp(cmd_ptr->cmd, USER_CMD_RESET_IMU) == 0) {
+        MPU6050_Reset();
+        printf("IMU reset!\n, now yaw:%.2f\n", g_yaw);
     }
 }
 

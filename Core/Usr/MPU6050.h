@@ -2,7 +2,6 @@
 #define MPU6050_H
 
 #include <stdint.h>
-#include "i2c.h"
 
 extern float g_yaw;
 extern float gyroZ_offset;
@@ -43,17 +42,19 @@ typedef struct
 } Kalman_t;
 
 
-uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx);
+uint8_t MPU6050_Init(void);
 
-void MPU6050_Read_Accel(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
+void MPU6050_Read_Accel(MPU6050_t *DataStruct);
 
-void MPU6050_Read_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
+void MPU6050_Read_Gyro(MPU6050_t *DataStruct);
 
-void MPU6050_Read_Temp(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
+void MPU6050_Read_Temp(MPU6050_t *DataStruct);
 
-void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *DataStruct);
+void MPU6050_Read_All(MPU6050_t *DataStruct);
 
 double Kalman_getAngle(Kalman_t *Kalman, double newAngle, double newRate, double dt);
 
 void MPU6050_Calibration(void);
+
+void MPU6050_Reset(void);
 #endif

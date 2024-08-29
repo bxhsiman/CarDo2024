@@ -47,6 +47,10 @@ extern "C" {
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
+//#define MY_BASE
+//#define MY_UP_1
+#define MY_UP_1_NO_GYRO
+
 /* USER CODE END EM */
 
 /* Exported functions prototypes ---------------------------------------------*/
@@ -72,6 +76,10 @@ void Error_Handler(void);
 #define ESP32_EN_GPIO_Port GPIOC
 #define ESP32_PWR_ON_Pin GPIO_PIN_2
 #define ESP32_PWR_ON_GPIO_Port GPIOB
+#define SW_SCL_Pin GPIO_PIN_10
+#define SW_SCL_GPIO_Port GPIOB
+#define SW_SDA_Pin GPIO_PIN_11
+#define SW_SDA_GPIO_Port GPIOB
 #define BTN_R_Pin GPIO_PIN_12
 #define BTN_R_GPIO_Port GPIOB
 #define LED_BL_Pin GPIO_PIN_13

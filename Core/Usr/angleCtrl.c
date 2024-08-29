@@ -8,9 +8,9 @@
 #include "MPU6050.h"
 
 AngleCtrl_t angleCtrl = {
-        .Kp = 5,
+        .Kp = 40,
         .Kd = 0,
-        .Ki = 0.03f,
+        .Ki = 0,
         .target = 0,
         .integral = 0,
         .last_error = 0,
@@ -65,4 +65,26 @@ float AngleCtrl(float angle, int16_t base_speed)
 
     // 返回当前的误差值
     return error;
+}
+
+float AnglePID(float error)
+{
+    // 局部变量替代静态变量
+    float derivative, output;
+
+    // 计算积分项并限制在最大值范围内
+    angleCtrl.integral += error;
+    angleCtrl.integral = LIMIT_MAX(angleCtrl.integral, -angleCtrl.integral_max, angleCtrl.integral_max);
+
+    // 计算微分项
+    derivative = error - angleCtrl.last_error;
+    angleCtrl.last_error = error;
+
+    // 计算PID输出
+    output = (angleCtrl.Kp * error + angleCtrl.Kd * derivative + angleCtrl.Ki * angleCtrl.integral);
+
+    output = LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
+
+    // 限制输出
+    return output;
 }

@@ -28,5 +28,6 @@ typedef struct
 
 float AngleCtrl(float angle, int16_t base_speed);
 float AngleCtrl_feedforward(float angle, int16_t base_speed);
+float AnglePID(float angle);
 
 #endif //CAR_2023_ANGLECTRL_H

@@ -28,6 +28,7 @@
 #define USER_CMD_FLASH_INIT        "flash_init"
 #define USER_CMD_MUSIC_ON        "music_on"
 #define USER_CMD_MUSIC_OFF    "music_off"
+#define USER_CMD_RESET_IMU   "reset_imu"
 
 #pragma pack(4)
 typedef struct {

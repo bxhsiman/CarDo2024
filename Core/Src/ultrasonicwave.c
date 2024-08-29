@@ -1,6 +1,5 @@
 #include "main.h"
 #include "tim.h"
-#include "oled_i2c.h"
 #include "UltrasonicWave.h"
 extern float g_DistanceSet; 
 
