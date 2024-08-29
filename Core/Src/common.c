@@ -235,7 +235,7 @@ void CheckBtnRight(void) {
                     adc_value_min = g_TrackStatus.ir_adc[i];
                 }
             }
-            int temp_threshold = (adc_value_max - adc_value_min) / 2 - 300;
+            int temp_threshold = (adc_value_max - adc_value_min) / 2;
             if (temp_threshold > 0) {
                 g_CarConfig.adc_compare_gate = temp_threshold;
             } else {

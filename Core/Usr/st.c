@@ -84,7 +84,7 @@ void UP2_StateMachine(void) {
 
             if (g_TrackStatus.full_white == 1) {
                 static uint32_t enter_times = 0;
-                if (++enter_times > 500) {
+                if (++enter_times > 50) {
                     enter_times = 0;
                     g_music_enable = 0;
                     if (white_to_black_cnt % 2 == 0) {
@@ -97,9 +97,9 @@ void UP2_StateMachine(void) {
             break;
         }
         case UP2_STATE_TURN_RIGHT: {
-            if (turn_right_cnt == 4) {
-                trans_state(UP2_STATE_STOP);
-            }
+//            if (turn_right_cnt == 4) {
+//                trans_state(UP2_STATE_STOP);
+//            }
             int16_t yaw_speed = 0;
             yaw_speed = AnglePID(g_yaw + 45);
 
@@ -112,12 +112,12 @@ void UP2_StateMachine(void) {
             }
 
             StopAllMoto();
-            CarMotoCtrl(400 + yaw_speed, 400 - yaw_speed);
+            CarMotoCtrl(350 + yaw_speed, 350 - yaw_speed);
 
             static uint32_t enter_times = 0;
             if (g_TrackStatus.full_white != 1) {
                 enter_times++;
-                if (st_time > 1000 && enter_times > 100) {
+                if (st_time > 100 && enter_times > 3) {
                     trans_state(UP2_STATE_FINDLINE_RIGHT);
                 }
             }
@@ -126,7 +126,7 @@ void UP2_StateMachine(void) {
         case UP2_STATE_TURN_LEFT: {
             int16_t yaw_speed = 0;
             int16_t target_yaw = -135; // must be negative
-            yaw_speed = AnglePID(g_yaw - (180 - 45));
+//            yaw_speed = AnglePID(g_yaw - (180 - 45));
             yaw_speed = AnglePID(g_yaw > 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
 
             yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
@@ -137,12 +137,12 @@ void UP2_StateMachine(void) {
                 printf("yaw speed is %d\n", yaw_speed);
             }
             StopAllMoto();
-            CarMotoCtrl(400 + yaw_speed, 400 - yaw_speed);
+            CarMotoCtrl(350 + yaw_speed, 350 - yaw_speed);
 
             static uint32_t enter_times = 0;
             if (g_TrackStatus.full_white != 1) {
                 enter_times++;
-                if (enter_times > 100) {
+                if (enter_times > 3) {
                     trans_state(UP2_STATE_FINDLINE_LEFT);
                 }
             }
@@ -152,9 +152,32 @@ void UP2_StateMachine(void) {
         case UP2_STATE_FINDLINE_RIGHT: {
             // find line at target is 0°
             int16_t yaw_speed = 0;
-            yaw_speed = AnglePID(g_yaw);
-            yaw_speed = LIMIT_MAX(yaw_speed, -500, 500);
-            yaw_speed = LIMIT_MIN(yaw_speed, -300, 300);
+            int16_t target_yaw = 45;
+
+            yaw_speed = -1 * AnglePID(g_yaw < 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
+            yaw_speed = LIMIT_MAX(yaw_speed, -600, 600);
+            yaw_speed = LIMIT_MIN(yaw_speed, -400, 400);
+
+            if (g_TrackStatus.adc_value & 0x04) {
+                StopAllMoto();
+                trans_state(UP2_STATE_BLACK_TRACKING);
+                return;
+            }
+
+            if (g_yaw < 0 ? g_yaw > (target_yaw - 10) : g_yaw < -(target_yaw - 10)) {
+                StopAllMoto();
+                static uint32_t find_middle_line = 0;
+                // 向前十次向后十次
+                if (++find_middle_line < 800) {
+                    CarMotoCtrl(0, 300);
+                } else {
+                    CarMotoCtrl(300, 0);
+                    find_middle_line = 0;
+                }
+                return;
+            }
+
+
             static uint32_t t = 0;
             if (++t > 100) {
                 t = 0;
@@ -165,18 +188,41 @@ void UP2_StateMachine(void) {
             StopAllMoto();
             CarMotoCtrl(0 + yaw_speed, 0 - yaw_speed);
 
-            if (g_yaw < 20 && g_yaw > -20) {
-                trans_state(UP2_STATE_BLACK_TRACKING);
-            }
+
             break;
         }
 
         case UP2_STATE_FINDLINE_LEFT: {
             // find line at target is -180°
             int16_t yaw_speed = 0;
-            yaw_speed = AnglePID(g_yaw < 0 ? (g_yaw + 180) : (g_yaw - 180));
-            yaw_speed = LIMIT_MAX(yaw_speed, -500, 500);
-            yaw_speed = LIMIT_MIN(yaw_speed, -300, 300);
+            int16_t target_yaw = 160;
+//            yaw_speed = AnglePID(g_yaw < 0 ? (g_yaw + 180) : (g_yaw - 180));
+            yaw_speed = -1 * AnglePID(g_yaw > 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
+            yaw_speed = LIMIT_MAX(yaw_speed, -600, 600);
+            yaw_speed = LIMIT_MIN(yaw_speed, -500, 500);
+
+            if (!((g_TrackStatus.adc_value & 0x01) || (g_TrackStatus.adc_value & 0x10))) {
+                StopAllMoto();
+                trans_state(UP2_STATE_BLACK_TRACKING);
+                return;
+            }
+
+            if (g_yaw < 0 ? g_yaw < -(target_yaw - 20) : g_yaw > (target_yaw - 20
+            )) {
+                StopAllMoto();
+                // 向前十次向后十次
+                static uint32_t find_middle_line = 0;
+                if (++find_middle_line < 800) {
+                    StopAllMoto();
+                    CarMotoCtrl(0, 400);
+                } else {
+                    StopAllMoto();
+                    CarMotoCtrl(400, 0);
+                    find_middle_line = 0;
+                }
+                return;
+            }
+
             static uint32_t t = 0;
             if (++t > 100) {
                 t = 0;
@@ -187,9 +233,6 @@ void UP2_StateMachine(void) {
             StopAllMoto();
             CarMotoCtrl(0 + yaw_speed, 0 - yaw_speed);
 
-            if (-((fabs(g_yaw) - 180)) < 20) {
-                trans_state(UP2_STATE_BLACK_TRACKING);
-            }
             break;
         }
 

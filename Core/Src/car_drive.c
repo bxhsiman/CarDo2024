@@ -279,16 +279,16 @@ void CarTrackCtrl(void) {
 //
 //#endif
 
-            if (g_TrackStatus.full_black) {
-                HAL_TIM_Base_Stop_IT(&htim6);
-                StopAllMoto();
-                CarMotoCtrl(0, 0);
-                HAL_ADC_Stop_DMA(&hadc1);
-                IR_Track_Power_Off();
-                HAL_TIM_Base_Start_IT(&htim7);
-                g_CarCtrl.car_mode = CAR_IDLE;
-                return;
-            }
+//            if (g_TrackStatus.full_black) {
+//                HAL_TIM_Base_Stop_IT(&htim6);
+//                StopAllMoto();
+//                CarMotoCtrl(0, 0);
+//                HAL_ADC_Stop_DMA(&hadc1);
+//                IR_Track_Power_Off();
+//                HAL_TIM_Base_Start_IT(&htim7);
+//                g_CarCtrl.car_mode = CAR_IDLE;
+//                return;
+//            }
 
 //            if(++start_delay > 100){
 //                printf("IR result:");

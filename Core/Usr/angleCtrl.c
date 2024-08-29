@@ -8,9 +8,9 @@
 #include "MPU6050.h"
 
 AngleCtrl_t angleCtrl = {
-        .Kp = 5,
-        .Kd = 0,
-        .Ki = 0,
+        .Kp = 25,
+        .Kd = 2,
+        .Ki = 0.5f,
         .target = 0,
         .integral = 0,
         .last_error = 0,
