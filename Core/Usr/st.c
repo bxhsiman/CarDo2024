@@ -22,6 +22,26 @@ uint8_t black_to_white_cnt = 0;
 uint8_t turn_right_cnt = 0;
 uint8_t turn_left_cnt = 0;
 
+static void black_find_line(void) {
+    // when white to black is odd, we should turn left
+    static uint32_t enter_times = 0;
+    StopAllMoto();
+    CarMotoCtrl(-300, -300);
+    if (++enter_times > 500) // backward for 500ms
+    {
+        enter_times = 0;
+        if (white_to_black_cnt % 2 == 0) // turn right for even times
+        {
+            StopAllMoto();
+            CarMotoCtrl(300, 100);
+        } else // turn left for odd times
+        {
+            StopAllMoto();
+            CarMotoCtrl(100, 300);
+        }
+    }
+}
+
 static void trans_state(uint8_t state) {
 
     last_state = up2_state;
@@ -205,8 +225,9 @@ void UP2_StateMachine(void) {
                 StopAllMoto();
                 trans_state(UP2_STATE_BLACK_TRACKING);
                 return;
+            } else if (g_TrackStatus.adc_value == 0x1F) { // full black
+                black_find_line();
             }
-
             if (g_yaw < 0 ? g_yaw < -(target_yaw - 20) : g_yaw > (target_yaw - 20
             )) {
                 StopAllMoto();
