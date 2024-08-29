@@ -121,7 +121,7 @@ void UP2_StateMachine(void) {
 //                trans_state(UP2_STATE_STOP);
 //            }
             int16_t yaw_speed = 0;
-            yaw_speed = AnglePID(g_yaw + 45);
+            yaw_speed = AnglePID(g_yaw + 46 - turn_right_cnt );
 
             yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
             static uint32_t t = 0;
@@ -132,7 +132,7 @@ void UP2_StateMachine(void) {
             }
 
             StopAllMoto();
-            CarMotoCtrl(350 + yaw_speed, 350 - yaw_speed);
+            CarMotoCtrl(300 + yaw_speed, 300 - yaw_speed);
 
             static uint32_t enter_times = 0;
             if (g_TrackStatus.full_white != 1) {
@@ -145,7 +145,7 @@ void UP2_StateMachine(void) {
         }
         case UP2_STATE_TURN_LEFT: {
             int16_t yaw_speed = 0;
-            int16_t target_yaw = -135; // must be negative
+            int16_t target_yaw = -138 + turn_left_cnt * 2; // must be negative
 //            yaw_speed = AnglePID(g_yaw - (180 - 45));
             yaw_speed = AnglePID(g_yaw > 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
 
@@ -157,7 +157,7 @@ void UP2_StateMachine(void) {
                 printf("yaw speed is %d\n", yaw_speed);
             }
             StopAllMoto();
-            CarMotoCtrl(350 + yaw_speed, 350 - yaw_speed);
+            CarMotoCtrl(300 + yaw_speed, 300 - yaw_speed);
 
             static uint32_t enter_times = 0;
             if (g_TrackStatus.full_white != 1) {
@@ -188,10 +188,10 @@ void UP2_StateMachine(void) {
                 StopAllMoto();
                 static uint32_t find_middle_line = 0;
                 // 向前十次向后十次
-                if (++find_middle_line < 800) {
-                    CarMotoCtrl(0, 300);
+                if (++find_middle_line < 2500) {
+                    CarMotoCtrl(300, 400);
                 } else {
-                    CarMotoCtrl(300, 0);
+                    CarMotoCtrl(400, 300);
                     find_middle_line = 0;
                 }
                 return;
@@ -225,20 +225,19 @@ void UP2_StateMachine(void) {
                 StopAllMoto();
                 trans_state(UP2_STATE_BLACK_TRACKING);
                 return;
-            } else if (g_TrackStatus.adc_value == 0x1F) { // full black
+            } else if (g_TrackStatus.full_black == 1) { // full black
                 black_find_line();
             }
             if (g_yaw < 0 ? g_yaw < -(target_yaw - 20) : g_yaw > (target_yaw - 20
             )) {
                 StopAllMoto();
-                // 向前十次向后十次
                 static uint32_t find_middle_line = 0;
-                if (++find_middle_line < 800) {
+                if (++find_middle_line < 2500) {
                     StopAllMoto();
-                    CarMotoCtrl(0, 400);
+                    CarMotoCtrl(300, 400);
                 } else {
                     StopAllMoto();
-                    CarMotoCtrl(400, 0);
+                    CarMotoCtrl(400, 300);
                     find_middle_line = 0;
                 }
                 return;
