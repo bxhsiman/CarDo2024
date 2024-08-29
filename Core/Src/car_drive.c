@@ -11,6 +11,7 @@
 #include "uart_dma.h"
 #include "../Usr/MPU6050.h"
 #include "../Usr/angleCtrl.h"
+#include "../Usr/st.h"
 #include <math.h>
 
 extern __IO uint8_t g_music_enable;
@@ -81,7 +82,7 @@ void CarCtrlInit(car_config_t *p_car_cfg) {
     g_CarCtrl.left_speed = p_car_cfg->car_speed_set;
     g_CarCtrl.right_speed = p_car_cfg->car_speed_set;
     g_CarCtrl.track_start = 0;
-    g_CarCtrl.car_mode = CAR_FIND_START;
+    g_CarCtrl.car_mode = CAR_TRACKING;
 
 
 }
@@ -111,7 +112,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     int last_err_diff;
 
     ADC_NormalCal();
-
+    UP2_StateMachine();
+//    return;
     if ((g_TrackStatus.full_white == 1) && (g_CarCtrl.car_mode == CAR_TRACKING)) {
 #ifdef MY_UP_1
         if(1) // already pass a white zone and passing a line
