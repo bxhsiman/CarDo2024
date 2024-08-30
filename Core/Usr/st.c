@@ -178,7 +178,7 @@ void UP2_StateMachine(void) {
             yaw_speed = LIMIT_MAX(yaw_speed, -600, 600);
             yaw_speed = LIMIT_MIN(yaw_speed, -400, 400);
 
-            if (g_TrackStatus.adc_value & 0x04) {
+            if (!((g_TrackStatus.adc_value & 0x01) || (g_TrackStatus.adc_value & 0x10))) {
                 StopAllMoto();
                 trans_state(UP2_STATE_BLACK_TRACKING);
                 return;
