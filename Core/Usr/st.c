@@ -121,7 +121,7 @@ void UP2_StateMachine(void) {
 //                trans_state(UP2_STATE_STOP);
 //            }
             int16_t yaw_speed = 0;
-            yaw_speed = AnglePID(g_yaw + 46 - turn_right_cnt );
+            yaw_speed = AnglePID(g_yaw + 46 - turn_right_cnt * 1.2f );
 
             yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
             static uint32_t t = 0;
@@ -145,7 +145,8 @@ void UP2_StateMachine(void) {
         }
         case UP2_STATE_TURN_LEFT: {
             int16_t yaw_speed = 0;
-            int16_t target_yaw = -138 + turn_left_cnt * 2; // must be negative
+//            int16_t target_yaw = -138 + turn_left_cnt * 1.7
+            int16_t target_yaw = -138 - turn_left_cnt * 1.0f;
 //            yaw_speed = AnglePID(g_yaw - (180 - 45));
             yaw_speed = AnglePID(g_yaw > 0 ? (target_yaw - g_yaw) : (g_yaw - target_yaw));
 
