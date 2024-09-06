@@ -152,7 +152,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
         {
             yaw_speed = AnglePID(g_yaw < 0 ? (g_yaw + 180) : (g_yaw - 180));
 
-            yaw_speed = LIMIT_MAX(yaw_speed, -300, 300);
+            yaw_speed = LIMIT_MAX(yaw_speed, -400, 400);
             static uint32_t t = 0;
             if( ++ t > 70)
             {
@@ -163,7 +163,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
         }
         StopAllMoto();
 
-        CarMotoCtrl(550 + yaw_speed, 550 - yaw_speed);
+        CarMotoCtrl(500 + yaw_speed, 500 - yaw_speed);
         return;
 #endif
 
