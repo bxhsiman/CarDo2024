@@ -11,6 +11,7 @@
 #include "uart_dma.h"
 #include "../Usr/MPU6050.h"
 #include "../Usr/angleCtrl.h"
+#include "../Usr/st.h"
 #include <math.h>
 
 extern __IO uint8_t g_music_enable;
@@ -81,7 +82,7 @@ void CarCtrlInit(car_config_t *p_car_cfg) {
     g_CarCtrl.left_speed = p_car_cfg->car_speed_set;
     g_CarCtrl.right_speed = p_car_cfg->car_speed_set;
     g_CarCtrl.track_start = 0;
-    g_CarCtrl.car_mode = CAR_FIND_START;
+    g_CarCtrl.car_mode = CAR_TRACKING;
 
 
 }
@@ -111,7 +112,8 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
     int last_err_diff;
 
     ADC_NormalCal();
-
+    UP2_StateMachine();
+    return;
     if ((g_TrackStatus.full_white == 1) && (g_CarCtrl.car_mode == CAR_TRACKING)) {
 #ifdef MY_UP_1
         if(1) // already pass a white zone and passing a line
@@ -277,16 +279,16 @@ void CarTrackCtrl(void) {
 //
 //#endif
 
-            if (g_TrackStatus.full_black) {
-                HAL_TIM_Base_Stop_IT(&htim6);
-                StopAllMoto();
-                CarMotoCtrl(0, 0);
-                HAL_ADC_Stop_DMA(&hadc1);
-                IR_Track_Power_Off();
-                HAL_TIM_Base_Start_IT(&htim7);
-                g_CarCtrl.car_mode = CAR_IDLE;
-                return;
-            }
+//            if (g_TrackStatus.full_black) {
+//                HAL_TIM_Base_Stop_IT(&htim6);
+//                StopAllMoto();
+//                CarMotoCtrl(0, 0);
+//                HAL_ADC_Stop_DMA(&hadc1);
+//                IR_Track_Power_Off();
+//                HAL_TIM_Base_Start_IT(&htim7);
+//                g_CarCtrl.car_mode = CAR_IDLE;
+//                return;
+//            }
 
 //            if(++start_delay > 100){
 //                printf("IR result:");
@@ -342,7 +344,7 @@ void CarPIDSpeedCtrl(float error, float error_diff) {
 
     if (++test_period > 1000) {
         test_period = 0;
-        printf("state is %d \n", g_CarCtrl.car_mode);
+        printf("state is %d \n", up2_state);
         printf("err is %.2f \n", error);
         printf("err diff is %.2f \n", error_diff);
         printf("speed is %d \n", g_CarCtrl.car_speed);
@@ -596,6 +598,8 @@ void UserCtrlCmdCallback(uint8_t *buf, void *ptr) {
         printf("\n");
 
         printf("YAW: %.2f\n", g_yaw);
+
+        printf("MachinState is %d \n", up2_state);
 
     } else if (strcmp(cmd_ptr->cmd, USER_CMD_FLASH_INIT) == 0) {
         EreaseFlashData(FLASH_BANK1_END - FLASH_PAGE_SIZE + 1, 1);

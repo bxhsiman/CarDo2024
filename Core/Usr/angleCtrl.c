@@ -8,50 +8,50 @@
 #include "MPU6050.h"
 
 AngleCtrl_t angleCtrl = {
-        .Kp = 50,
-        .Kd = 0,
-        .Ki = 0,
+        .Kp = 25,
+        .Kd = 2,
+        .Ki = 0.5f,
         .target = 0,
         .integral = 0,
         .last_error = 0,
-        .output_max = 450,
+        .output_max = 500,
         .output_min = 300,
         .integral_max = 200,
 };
 
 float AngleCtrl(float angle, int16_t base_speed)
 {
-    // ¾Ö²¿±äÁ¿Ìæ´ú¾²Ì¬±äÁ¿
+    // å±€éƒ¨å˜é‡æ›¿ä»£é™æ€å˜é‡
     float error, derivative, output;
     int16_t speed;
 
-    // ÉèÖÃÄ¿±ê½Ç¶È
+    // è®¾ç½®ç›®æ ‡è§’åº¦
     angleCtrl.target = angle;
 
-    // ¼ÆËãÎó²î
+    // è®¡ç®—è¯¯å·®
     error = angleCtrl.target - g_yaw;
 
-    // ¼ÆËã»ı·ÖÏî²¢ÏŞÖÆÔÚ×î´óÖµ·¶Î§ÄÚ
+    // è®¡ç®—ç§¯åˆ†é¡¹å¹¶é™åˆ¶åœ¨æœ€å¤§å€¼èŒƒå›´å†…
     angleCtrl.integral += error;
     angleCtrl.integral = LIMIT_MAX(angleCtrl.integral, -angleCtrl.integral_max, angleCtrl.integral_max);
 
-    // ¼ÆËãÎ¢·ÖÏî
+    // è®¡ç®—å¾®åˆ†é¡¹
     derivative = error - angleCtrl.last_error;
     angleCtrl.last_error = error;
 
-    // ¼ÆËãPIDÊä³ö
+    // è®¡ç®—PIDè¾“å‡º
     output = (angleCtrl.Kp * error + angleCtrl.Kd * derivative + angleCtrl.Ki * angleCtrl.integral);
 
     output = LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
 
-    // ÏŞÖÆÊä³ö²¢¼ÆËãËÙ¶È
+    // é™åˆ¶è¾“å‡ºå¹¶è®¡ç®—é€Ÿåº¦
     speed = (int16_t) LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
 
-    // µ÷Õûµç»úËÙ¶È
+    // è°ƒæ•´ç”µæœºé€Ÿåº¦
     CarMotoCtrl(LIMIT_MIN((int16_t)(base_speed - speed), -angleCtrl.output_min, angleCtrl.output_min),
                 LIMIT_MIN((int16_t) (base_speed + speed), -angleCtrl.output_min, angleCtrl.output_min));
 
-    // ÑÓ³Ù´¦Àí
+    // å»¶è¿Ÿå¤„ç†
     static uint32_t delay = 0;
     if (delay > 20)
     {
@@ -60,31 +60,31 @@ float AngleCtrl(float angle, int16_t base_speed)
     if (++delay > 200)
     {
         delay = 0;
-        printf("err is %.2f \n", error); // Êä³öÎó²î£¬ÓÃÓÚµ÷ÊÔ
+        printf("err is %.2f \n", error); // è¾“å‡ºè¯¯å·®ï¼Œç”¨äºè°ƒè¯•
     }
 
-    // ·µ»Øµ±Ç°µÄÎó²îÖµ
+    // è¿”å›å½“å‰çš„è¯¯å·®å€¼
     return error;
 }
 
 float AnglePID(float error)
 {
-    // ¾Ö²¿±äÁ¿Ìæ´ú¾²Ì¬±äÁ¿
+    // å±€éƒ¨å˜é‡æ›¿ä»£é™æ€å˜é‡
     float derivative, output;
 
-    // ¼ÆËã»ı·ÖÏî²¢ÏŞÖÆÔÚ×î´óÖµ·¶Î§ÄÚ
+    // è®¡ç®—ç§¯åˆ†é¡¹å¹¶é™åˆ¶åœ¨æœ€å¤§å€¼èŒƒå›´å†…
     angleCtrl.integral += error;
     angleCtrl.integral = LIMIT_MAX(angleCtrl.integral, -angleCtrl.integral_max, angleCtrl.integral_max);
 
-    // ¼ÆËãÎ¢·ÖÏî
+    // è®¡ç®—å¾®åˆ†é¡¹
     derivative = error - angleCtrl.last_error;
     angleCtrl.last_error = error;
 
-    // ¼ÆËãPIDÊä³ö
+    // è®¡ç®—PIDè¾“å‡º
     output = (angleCtrl.Kp * error + angleCtrl.Kd * derivative + angleCtrl.Ki * angleCtrl.integral);
 
     output = LIMIT_MAX(output, -angleCtrl.output_max, angleCtrl.output_max);
 
-    // ÏŞÖÆÊä³ö
+    // é™åˆ¶è¾“å‡º
     return output;
 }
