@@ -6,10 +6,14 @@
 ### 发光二极管阵列的焊接与调测
 1. 焊接练习板
 2. 焊接发光二极管阵列
+3. 显示用户内容
+   
+用户内容的显示我们使用了[在线取模工具](https://www.zhetao.com/fontarray.html)结合[python脚本](Tools/format_change.py)进行重新格式化，对显示部分数组定义进行修改即可完成字符显示。具体扫描原理不再叙述。
+
 #### 智能四轮车
 1. 基础要求：小车从A点触发沿黑线自动循迹，返回A点停止
-2. 提高要求：在提高赛道中，小车能从A点出发后，自动行驶到B点，沿半弧线行驶到C点，再由C点行驶到D点，最后沿半弧线行驶到A点停车
-3. 在提高赛道中，小车能从A点出发后，自动行驶到C点，沿半弧线行驶到B点，再由B点行驶到D点，最后沿半弧线行驶到A点，完成三圈记录完成时间
+2. 提高要求1：在提高赛道中，小车能从A点出发后，自动行驶到B点，沿半弧线行驶到C点，再由C点行驶到D点，最后沿半弧线行驶到A点停车
+3. 提高要求2：在提高赛道中，小车能从A点出发后，自动行驶到C点，沿半弧线行驶到B点，再由B点行驶到D点，最后沿半弧线行驶到A点，完成三圈记录完成时间
 <div style="display: flex; justify-content: space-around; align-items: center; text-align: center;">
     <div>
         <img src="image/基础赛道.png" style="max-width: 100%; height: auto; margin-right: 20px;">
@@ -283,16 +287,23 @@ case UP2_STATE_FINDLINE_RIGHT: {
 
 在本次任务中，我们采用了分布式版本管理系统，这对我们的协作起到了至关重要的作用，一位同学调车修改算法的同时另一位同学可以同步开发驱动，大大节约了我们的时间。
 
+## 参考文献
+1. [ESP32-Pico 数据手册](https://www.espressif.com/sites/default/files/documentation/esp32-pico_series_datasheet_cn.pdf)
+2. [ES0340(STM32F103勘误手册)](https://www.st.com/resource/en/errata_sheet/es0340-stm32f101xcde-stm32f103xcde-device-errata-stmicroelectronics.pdf)
 
 ## 项目结构
 ``` shell
 CarDo
 |--readme.md # 项目说明
-|--Core # 核心代码
+|--Core # 原始代码
+|--Usr # 用户代码
 |--Drivers # 驱动代码
 |--MiddleWares # 中间件
 |--USB_DEVICE # USB设备
 |--CmakeLists.txt  # cmake配置文件
 |--car_2023.ioc # CubeMX配置文件
+|--image # 图片
+|--esp32_bin # ESP32固件
+|--tools # 工具(取模软件)
 ```
 
